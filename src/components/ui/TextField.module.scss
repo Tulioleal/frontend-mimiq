@@ -1,0 +1,42 @@
+.field {
+  display: grid;
+  gap: 0.5rem;
+}
+.label {
+  font-family: var(--font-label);
+  font-size: 0.68rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+}
+.control {
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-container-lowest);
+  box-shadow: var(--shadow-inset);
+  color: var(--on-surface);
+  padding: 0.9rem 1rem;
+  resize: vertical;
+
+  &::placeholder {
+    color: color-mix(in srgb, var(--on-surface-muted), transparent 45%);
+  }
+  &[aria-invalid="true"] {
+    box-shadow:
+      var(--shadow-inset),
+      0 0 0 2px rgba(255, 180, 171, 0.35);
+  }
+}
+.textarea {
+  min-height: 10rem;
+  line-height: 1.6;
+}
+.helper,
+.error {
+  font-size: 0.82rem;
+  color: var(--on-surface-muted);
+}
+.error {
+  color: var(--danger);
+}

@@ -1,0 +1,115 @@
+.shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 16rem 1fr;
+  grid-template-rows: 4rem 1fr;
+}
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 0 1.25rem;
+  background: rgba(19, 19, 22, 0.94);
+  backdrop-filter: blur(14px);
+}
+.brand {
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.04em;
+}
+.topbar nav {
+  display: flex;
+  gap: 0.5rem;
+}
+.topbar nav a {
+  padding: 0.55rem 0.75rem;
+  color: var(--on-surface-muted);
+  font-family: var(--font-label);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.topbar nav .active {
+  color: var(--primary);
+  background: var(--surface-container-high);
+}
+.headerTools {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.sidebar {
+  background: var(--surface-container-low);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.engine {
+  display: grid;
+  gap: 0.25rem;
+  font-family: var(--font-label);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+}
+.engine span {
+  width: 0.55rem;
+  height: 0.55rem;
+  background: var(--secondary);
+  border-radius: 50%;
+  box-shadow: 0 0 18px var(--secondary-container);
+}
+.engine small {
+  color: var(--on-surface-muted);
+}
+.cta {
+  display: grid;
+  place-items: center;
+  min-height: 2.75rem;
+  background: linear-gradient(135deg, var(--primary), var(--primary-container));
+  color: var(--on-primary);
+  border-radius: var(--radius-sm);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.console {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.45rem;
+  background: var(--surface-container-lowest);
+  box-shadow: var(--shadow-inset);
+  padding: 1rem;
+  font-family: var(--font-label);
+  font-size: 0.68rem;
+  color: var(--on-surface-muted);
+}
+.console strong {
+  color: var(--secondary);
+}
+.main {
+  overflow: auto;
+  padding: clamp(1rem, 2vw, 2rem);
+}
+@media (max-width: 860px) {
+  .shell {
+    display: block;
+  }
+  .topbar {
+    position: sticky;
+    overflow-x: auto;
+    gap: 1rem;
+  }
+  .sidebar {
+    display: none;
+  }
+  .headerTools {
+    margin-left: 0;
+  }
+}

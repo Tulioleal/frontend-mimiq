@@ -1,0 +1,8 @@
+node_modules/
+.next/
+out/
+coverage/
+references/
+*.plan.*
+package-lock.json
+tsconfig.tsbuildinfo

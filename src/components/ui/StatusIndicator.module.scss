@@ -1,0 +1,40 @@
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.8rem;
+  background: rgba(57, 57, 60, 0.6);
+  backdrop-filter: blur(12px);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-label);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.status small {
+  color: var(--on-surface-muted);
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--font-body);
+}
+.compact small {
+  display: none;
+}
+.dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+.ready {
+  color: var(--secondary);
+  box-shadow: 0 0 20px rgba(37, 164, 117, 0.18);
+}
+.booting {
+  color: var(--warning);
+}
+.offline,
+.stale,
+.error {
+  color: var(--danger);
+}

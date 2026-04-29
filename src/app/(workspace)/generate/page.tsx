@@ -1,0 +1,171 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { WaveformBars } from "@/components/audio/WaveformBars";
+import { Button } from "@/components/ui/Button";
+import { Fader } from "@/components/ui/Fader";
+import { TextArea } from "@/components/ui/TextField";
+import { StatusIndicator } from "@/components/ui/StatusIndicator";
+import { useGpuStatus, useVoices } from "@/hooks/useApi";
+import { createGenerationClient, type GenerationClient } from "@/lib/websocket/generationClient";
+import { useGenerationStore } from "@/stores/generationStore";
+import styles from "./page.module.scss";
+
+export default function GeneratePage() {
+  const voices = useVoices();
+  const gpu = useGpuStatus();
+  const state = useGenerationStore();
+  const [streaming, setStreaming] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [downloadUrl, setDownloadUrl] = useState<string>();
+  const [message, setMessage] = useState("Idle");
+  const [wave, setWave] = useState<number[]>([]);
+  const clientRef = useRef<GenerationClient | null>(null);
+  const selectedVoice = voices.data?.find((voice) => voice.id === state.selectedVoiceId);
+  const status = gpu.isError
+    ? { state: "error" as const, message: "Polling failed" }
+    : (gpu.data ?? { state: "stale" as const, message: "Checking GPU" });
+  const ready = status.state === "ready";
+
+  useEffect(() => () => clientRef.current?.cancel(), []);
+
+  function start() {
+    if (!selectedVoice || !ready || !state.text.trim()) return;
+    setStreaming(true);
+    setProgress(0);
+    setDownloadUrl(undefined);
+    setMessage("Opening stream");
+    setWave([]);
+    const client = createGenerationClient((event) => {
+      if (event.type === "ready") {
+        setMessage("Stream ready");
+        client.send({
+          voiceId: selectedVoice.id,
+          text: state.text,
+          stylePrompt: state.stylePrompt,
+          temperature: state.temperature,
+          speed: state.speed,
+          repetitionPenalty: state.repetitionPenalty
+        });
+      }
+      if (event.type === "chunk") {
+        setMessage("Early Play active");
+        setWave((items) => [...items.slice(-42), 20 + Math.random() * 78]);
+      }
+      if (event.type === "progress") setProgress(event.progress);
+      if (event.type === "download_ready" || event.type === "complete") {
+        setStreaming(false);
+        setProgress(100);
+        setMessage("Generation complete");
+        if (event.url) setDownloadUrl(event.url);
+      }
+      if (event.type === "gpu_not_ready" || event.type === "error") {
+        setStreaming(false);
+        setMessage(event.message ?? "Stream failed");
+      }
+    });
+    clientRef.current = client;
+  }
+
+  return (
+    <div className={styles.page}>
+      <section className={styles.editor}>
+        <header className={styles.header}>
+          <p>Generation Canvas</p>
+          <h1>Script editor and live stream</h1>
+        </header>
+        <TextArea
+          label="Synthesis text"
+          value={state.text}
+          onChange={(event) => state.updateDraft({ text: event.target.value })}
+          placeholder="Enter unrestricted text for synthesis..."
+        />
+        <TextArea
+          label="Style prompt"
+          value={state.stylePrompt}
+          onChange={(event) => state.updateDraft({ stylePrompt: event.target.value })}
+          placeholder="Example: paced documentary tone, restrained emotion, crisp consonants"
+        />
+        <div className={styles.wavePanel}>
+          <WaveformBars values={wave.length ? wave : undefined} active={streaming} />
+          <div className={styles.progress}>
+            <span style={{ width: `${progress}%` }} />
+          </div>
+        </div>
+      </section>
+      <aside className={styles.controls}>
+        <StatusIndicator state={status.state} message={status.message} />
+        <div className={styles.voice}>
+          <span>Active voice</span>
+          <strong>{selectedVoice?.name ?? "Select from dashboard"}</strong>
+        </div>
+        <Fader
+          label="Temperature"
+          min={0.1}
+          max={1}
+          step={0.1}
+          value={state.temperature}
+          onChange={(temperature) => state.updateDraft({ temperature })}
+        />
+        <Fader
+          label="Speed"
+          min={0.5}
+          max={2}
+          step={0.1}
+          value={state.speed}
+          unit="x"
+          onChange={(speed) => state.updateDraft({ speed })}
+        />
+        <Fader
+          label="Repetition"
+          min={1}
+          max={10}
+          step={0.1}
+          value={state.repetitionPenalty}
+          onChange={(repetitionPenalty) => state.updateDraft({ repetitionPenalty })}
+        />
+        {!ready && (
+          <p className={styles.notice}>
+            {status.state === "booting"
+              ? "GPU is booting. Warm-up usually takes 3-5 minutes."
+              : "Generation is blocked until the GPU reports Ready."}
+          </p>
+        )}
+        <Button
+          variant="primary"
+          loading={streaming}
+          disabled={!ready || !selectedVoice || !state.text.trim()}
+          onClick={start}
+        >
+          Generate Audio
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={!streaming}
+          onClick={() => {
+            clientRef.current?.cancel();
+            setStreaming(false);
+            setMessage("Cancelled");
+          }}
+        >
+          Cancel Stream
+        </Button>
+        {downloadUrl ? (
+          <a className={styles.download} href={downloadUrl}>
+            Download Output
+          </a>
+        ) : (
+          <p className={styles.notice}>Download appears after `complete` or `download_ready` event.</p>
+        )}
+        <div className={styles.readout}>
+          <span>STATE</span>
+          <strong>{message}</strong>
+          <span>VALUES</span>
+          <strong>
+            {state.temperature} / {state.speed}x / {state.repetitionPenalty}
+          </strong>
+        </div>
+      </aside>
+    </div>
+  );
+}

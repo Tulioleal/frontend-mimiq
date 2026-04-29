@@ -1,0 +1,33 @@
+.meter {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  gap: 0.9rem;
+  align-items: flex-end;
+}
+.track {
+  height: 11rem;
+  background: var(--surface-container-lowest);
+  box-shadow: var(--shadow-inset);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+.track span {
+  width: 100%;
+  background: linear-gradient(0deg, var(--secondary), var(--primary));
+  box-shadow: 0 0 18px rgba(104, 219, 169, 0.28);
+}
+.readout {
+  display: grid;
+  gap: 0.35rem;
+  font-family: var(--font-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+}
+.readout strong {
+  color: var(--primary);
+  font-size: 1.8rem;
+  letter-spacing: -0.04em;
+}

@@ -1,0 +1,57 @@
+.button {
+  min-height: 2.5rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.95rem;
+  color: var(--on-surface);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition:
+    transform var(--motion-fast),
+    opacity var(--motion-fast),
+    background var(--motion-fast);
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  &:disabled {
+    opacity: 0.42;
+  }
+}
+
+.primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-container));
+  color: var(--on-primary);
+}
+.secondary {
+  background: var(--surface-container-highest);
+  color: var(--on-surface);
+}
+.ghost {
+  background: transparent;
+  color: var(--on-surface-variant);
+}
+.destructive {
+  background: color-mix(in srgb, var(--danger-strong) 22%, var(--surface-container-high));
+  color: var(--danger);
+}
+
+.spinner {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: spin 800ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

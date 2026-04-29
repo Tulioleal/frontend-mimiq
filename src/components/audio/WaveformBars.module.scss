@@ -1,0 +1,30 @@
+.waveform {
+  min-height: 5rem;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0.8rem;
+  background: var(--surface-container-lowest);
+  box-shadow: var(--shadow-inset);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.waveform span {
+  width: 3px;
+  min-width: 2px;
+  background: var(--primary);
+  border-radius: 1px;
+  opacity: 0.86;
+}
+.active span {
+  background: linear-gradient(180deg, var(--primary), var(--secondary));
+  animation: pulse 900ms ease-in-out infinite alternate;
+}
+@keyframes pulse {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
