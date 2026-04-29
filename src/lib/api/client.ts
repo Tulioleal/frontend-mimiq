@@ -10,8 +10,11 @@ export class ApiError extends Error {
   }
 }
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-export const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_BASE_URL ?? "ws://localhost:8000";
+const publicApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+const publicWsBaseUrl = process.env.NEXT_PUBLIC_WS_BASE_URL?.trim();
+
+export const API_BASE_URL = publicApiBaseUrl ? publicApiBaseUrl.replace(/\/$/, "") : "";
+export const WS_BASE_URL = publicWsBaseUrl ? publicWsBaseUrl.replace(/\/$/, "") : "ws://localhost:8000";
 
 type RequestOptions = RequestInit & { formData?: FormData };
 

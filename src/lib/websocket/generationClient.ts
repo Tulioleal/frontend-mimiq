@@ -4,7 +4,7 @@ import type { GenerationEvent, GenerationPayload } from "@/lib/api/types";
 export type GenerationClient = { send: (payload: GenerationPayload) => void; cancel: () => void };
 
 export function createGenerationClient(onEvent: (event: GenerationEvent) => void): GenerationClient {
-  let socket: WebSocket | null = new WebSocket(`${WS_BASE_URL}/generations/stream`);
+  let socket: WebSocket | null = new WebSocket(`${WS_BASE_URL}/ws/generations/stream`);
 
   socket.binaryType = "blob";
   socket.onopen = () => onEvent({ type: "ready" });

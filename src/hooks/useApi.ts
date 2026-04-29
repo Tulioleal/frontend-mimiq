@@ -8,7 +8,7 @@ import type { AudioHealthReport, GpuStatus, Session, Voice } from "@/lib/api/typ
 export function useSession() {
   return useQuery({
     queryKey: ["session"],
-    queryFn: () => apiRequest<Session>("/auth/session"),
+    queryFn: () => apiRequest<Session>("/api/auth/session"),
     retry: false
   });
 }
@@ -17,10 +17,10 @@ export function useLogin() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (adminKey: string) =>
-      apiRequest<Session>("/auth/login", {
+      apiRequest<Session>("/api/auth/login", {
         method: "POST",
         headers: { "X-Admin-Key": adminKey },
-        body: JSON.stringify({})
+        body: JSON.stringify({ adminKey })
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["session"] })
   });
@@ -29,7 +29,7 @@ export function useLogin() {
 export function useLogout() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => apiRequest("/auth/logout", { method: "POST" }),
+    mutationFn: () => apiRequest("/api/auth/logout", { method: "POST" }),
     onSettled: () => queryClient.clear()
   });
 }
@@ -37,7 +37,7 @@ export function useLogout() {
 export function useGpuStatus() {
   return useQuery<GpuStatus>({
     queryKey: ["gpu-status"],
-    queryFn: async () => mapGpuStatus(await apiRequest("/status/gpu")),
+    queryFn: async () => mapGpuStatus(await apiRequest("/api/status/gpu")),
     refetchInterval: 5000
   });
 }
@@ -46,7 +46,7 @@ export function useVoices() {
   return useQuery<Voice[]>({
     queryKey: ["voices"],
     queryFn: async () => {
-      const payload = await apiRequest<unknown>("/voices");
+      const payload = await apiRequest<unknown>("/api/voices");
       const list = Array.isArray(payload)
         ? payload
         : typeof payload === "object" && payload && "voices" in payload && Array.isArray(payload.voices)
@@ -60,7 +60,7 @@ export function useVoices() {
 export function useDeleteVoice() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => apiRequest(`/voices/${id}`, { method: "DELETE" }),
+    mutationFn: (id: string) => apiRequest(`/api/voices/${id}`, { method: "DELETE" }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["voices"] })
   });
 }
@@ -72,7 +72,7 @@ export function useAnalyzeVoice() {
       const formData = new FormData();
       formData.append("name", name);
       formData.append("audio", blob, `${name || "voice-sample"}.webm`);
-      return apiRequest<AudioHealthReport>("/voices/analyze", { method: "POST", formData });
+      return apiRequest<AudioHealthReport>("/api/voices/analyze", { method: "POST", formData });
     },
     onSuccess: (report) => {
       if (report.accepted) queryClient.invalidateQueries({ queryKey: ["voices"] });

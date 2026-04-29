@@ -1,9 +1,59 @@
-/references
-*.plan.*
+# Dependencies
 node_modules/
+.pnp
+.pnp.*
+
+# Next.js / React build output
 .next/
 out/
+build/
+dist/
+
+# Testing and coverage
 coverage/
-.env*.local
-npm-debug.log*
+.nyc_output/
+playwright-report/
+test-results/
+
+# TypeScript
+*.tsbuildinfo
 tsconfig.tsbuildinfo
+next-env.d.ts
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Package manager caches
+.npm/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnpm-store/
+
+# Docker and local runtime artifacts
+docker-compose.override.yml
+*.pid
+*.seed
+
+# IDEs and OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Project reference/planning material not intended for source control
+/references/
+*.plan.*

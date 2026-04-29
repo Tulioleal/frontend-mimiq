@@ -7,8 +7,11 @@
     "lint": "eslint .",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
+    "validate:public-env": "node scripts/validate-public-env.mjs",
     "typecheck": "tsc --noEmit",
     "build": "next build",
+    "build:container": "npm run validate:public-env && npm run build",
+    "start": "HOSTNAME=0.0.0.0 node .next/standalone/server.js",
     "test": "vitest run"
   },
   "dependencies": {
