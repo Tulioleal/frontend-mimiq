@@ -14,8 +14,6 @@ permissions:
 env:
   NEXT_TELEMETRY_DISABLED: "1"
   NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL || '' }}
-  BACKEND_API_BASE_URL: ${{ vars.BACKEND_API_BASE_URL || 'https://api.example.com' }}
-  NEXT_PUBLIC_WS_BASE_URL: ${{ vars.NEXT_PUBLIC_WS_BASE_URL || 'wss://api.example.com' }}
 
 jobs:
   validate:
@@ -70,8 +68,6 @@ jobs:
           test -n "$ARTIFACT_REGISTRY_REPOSITORY"
           test -n "${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}"
           test -n "${{ vars.GCP_SERVICE_ACCOUNT }}"
-          test -n "$NEXT_PUBLIC_API_BASE_URL" || test -n "$BACKEND_API_BASE_URL"
-          test -n "$NEXT_PUBLIC_WS_BASE_URL"
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
@@ -91,8 +87,6 @@ jobs:
         run: |
           docker build \
             --build-arg NEXT_PUBLIC_API_BASE_URL="$NEXT_PUBLIC_API_BASE_URL" \
-            --build-arg NEXT_PUBLIC_WS_BASE_URL="$NEXT_PUBLIC_WS_BASE_URL" \
-            --build-arg BACKEND_API_BASE_URL="$BACKEND_API_BASE_URL" \
             --tag "$IMAGE_URI:${GITHUB_SHA}" \
             --tag "$IMAGE_URI:${GITHUB_REF_NAME//\//-}" \
             .

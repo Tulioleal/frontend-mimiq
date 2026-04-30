@@ -7,6 +7,7 @@ import { Fader } from "@/components/ui/Fader";
 import { TextArea } from "@/components/ui/TextField";
 import { StatusIndicator } from "@/components/ui/StatusIndicator";
 import { useGpuStatus, useVoices } from "@/hooks/useApi";
+import { getRuntimeConfig } from "@/lib/runtimeConfig";
 import { createGenerationClient, type GenerationClient } from "@/lib/websocket/generationClient";
 import { useGenerationStore } from "@/stores/generationStore";
 import styles from "./page.module.scss";
@@ -29,14 +30,24 @@ export default function GeneratePage() {
 
   useEffect(() => () => clientRef.current?.cancel(), []);
 
-  function start() {
+  async function start() {
     if (!selectedVoice || !ready || !state.text.trim()) return;
     setStreaming(true);
     setProgress(0);
     setDownloadUrl(undefined);
     setMessage("Opening stream");
     setWave([]);
-    const client = createGenerationClient((event) => {
+    let wsBaseUrl: string;
+
+    try {
+      wsBaseUrl = (await getRuntimeConfig()).wsBaseUrl;
+    } catch (error) {
+      setStreaming(false);
+      setMessage(error instanceof Error ? error.message : "Runtime config unavailable");
+      return;
+    }
+
+    const client = createGenerationClient(wsBaseUrl, (event) => {
       if (event.type === "ready") {
         setMessage("Stream ready");
         client.send({
