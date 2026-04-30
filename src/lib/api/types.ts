@@ -13,27 +13,43 @@ export type Voice = {
   waveform?: number[];
 };
 
+export type AudioHealthItem =
+  | string
+  | {
+      code?: string;
+      message?: string;
+      severity?: string;
+    };
+
 export type AudioHealthReport = {
   accepted: boolean;
   duration: number;
   peakDb?: number;
   noiseFloorDb?: number;
-  issues: string[];
-  recommendations: string[];
+  issues: AudioHealthItem[];
+  recommendations: AudioHealthItem[];
   voice?: Voice;
 };
 
 export type GenerationPayload = {
-  voiceId: string;
-  text: string;
-  stylePrompt: string;
-  temperature: number;
-  speed: number;
-  repetitionPenalty: number;
+  type: "start_generation";
+  voice_id: string;
+  original_text: string;
+  style_prompt: string;
+  language: string;
+  slider_config: {
+    temperature: number;
+    speech_speed: number;
+    repetition_penalty: number;
+  };
 };
 
 export type GenerationEvent =
   | { type: "ready" }
+  | { type: "closed" }
+  | { type: "status"; status: GpuState; detail?: string }
+  | { type: "accepted"; generation_id: string; rewritten_text: string }
+  | { type: "completed"; generation_id: string; output_gcs_path: string; gpu_time_ms?: number; rtf?: number }
   | { type: "progress"; progress: number; message?: string }
   | { type: "chunk"; chunk: Blob }
   | { type: "download_ready"; url: string; generationId?: string }

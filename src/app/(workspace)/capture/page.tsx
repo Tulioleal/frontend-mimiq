@@ -5,10 +5,28 @@ import { DecibelMeter } from "@/components/audio/DecibelMeter";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { useAnalyzeVoice } from "@/hooks/useApi";
+import type { AudioHealthItem } from "@/lib/api/types";
 import { useRecordingStore } from "@/stores/recordingStore";
 import styles from "./page.module.scss";
 
 const MIN_SECONDS = 60;
+
+function getHealthItemText(item: AudioHealthItem) {
+  if (typeof item === "string") return item;
+
+  const message = item.message?.trim();
+  const code = item.code?.trim();
+  const severity = item.severity?.trim();
+  const text = message || code || "Analyzer feedback unavailable";
+
+  return severity ? `${severity}: ${text}` : text;
+}
+
+function getHealthItemKey(section: string, item: AudioHealthItem, index: number) {
+  if (typeof item === "string") return `${section}-${item}-${index}`;
+
+  return `${section}-${item.code ?? item.message ?? "item"}-${index}`;
+}
 
 export default function CapturePage() {
   const [name, setName] = useState("");
@@ -135,11 +153,11 @@ export default function CapturePage() {
             <div className={report.accepted ? styles.reportOk : styles.reportBad}>
               <strong>{report.accepted ? "Accepted" : "Retry required"}</strong>
               <span>Duration: {Math.round(report.duration)}s</span>
-              {report.issues.map((issue) => (
-                <span key={issue}>{issue}</span>
+              {report.issues.map((issue, index) => (
+                <span key={getHealthItemKey("issue", issue, index)}>{getHealthItemText(issue)}</span>
               ))}
-              {report.recommendations.map((item) => (
-                <span key={item}>{item}</span>
+              {report.recommendations.map((item, index) => (
+                <span key={getHealthItemKey("recommendation", item, index)}>{getHealthItemText(item)}</span>
               ))}
             </div>
           )}

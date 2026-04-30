@@ -27,11 +27,13 @@ export default function GeneratePage() {
     ? { state: "error" as const, message: "Polling failed" }
     : (gpu.data ?? { state: "stale" as const, message: "Checking GPU" });
   const ready = status.state === "ready";
+  const validDraft = Boolean(selectedVoice && state.text.trim() && state.stylePrompt.trim());
+  const canStart = validDraft && !streaming && (status.state === "offline" || ready);
 
   useEffect(() => () => clientRef.current?.cancel(), []);
 
   async function start() {
-    if (!selectedVoice || !ready || !state.text.trim()) return;
+    if (!selectedVoice || !canStart) return;
     setStreaming(true);
     setProgress(0);
     setDownloadUrl(undefined);
@@ -51,19 +53,42 @@ export default function GeneratePage() {
       if (event.type === "ready") {
         setMessage("Stream ready");
         client.send({
-          voiceId: selectedVoice.id,
-          text: state.text,
-          stylePrompt: state.stylePrompt,
-          temperature: state.temperature,
-          speed: state.speed,
-          repetitionPenalty: state.repetitionPenalty
+          type: "start_generation",
+          voice_id: selectedVoice.id,
+          original_text: state.text,
+          style_prompt: state.stylePrompt,
+          language: "es",
+          slider_config: {
+            temperature: state.temperature,
+            speech_speed: state.speed,
+            repetition_penalty: state.repetitionPenalty
+          }
         });
+      }
+      if (event.type === "status") {
+        if (event.status === "booting") {
+          setMessage(event.detail ?? "XTTS startup workflow dispatched. Wait for Ready, then generate again.");
+        } else if (event.status === "offline") {
+          setMessage(event.detail ?? "GPU is offline. Startup request was sent.");
+        } else if (event.status === "ready") {
+          setMessage(event.detail ?? "GPU ready. Generation can start.");
+        }
+      }
+      if (event.type === "accepted") {
+        setProgress(10);
+        setMessage("Generation accepted");
       }
       if (event.type === "chunk") {
         setMessage("Early Play active");
         setWave((items) => [...items.slice(-42), 20 + Math.random() * 78]);
       }
       if (event.type === "progress") setProgress(event.progress);
+      if (event.type === "completed") {
+        setStreaming(false);
+        setProgress(100);
+        setMessage("Generation complete");
+        setDownloadUrl(`/api/generations/${encodeURIComponent(event.generation_id)}/audio`);
+      }
       if (event.type === "download_ready" || event.type === "complete") {
         setStreaming(false);
         setProgress(100);
@@ -73,6 +98,9 @@ export default function GeneratePage() {
       if (event.type === "gpu_not_ready" || event.type === "error") {
         setStreaming(false);
         setMessage(event.message ?? "Stream failed");
+      }
+      if (event.type === "closed") {
+        setStreaming(false);
       }
     });
     clientRef.current = client;
@@ -138,14 +166,16 @@ export default function GeneratePage() {
         {!ready && (
           <p className={styles.notice}>
             {status.state === "booting"
-              ? "GPU is booting. Warm-up usually takes 3-5 minutes."
-              : "Generation is blocked until the GPU reports Ready."}
+              ? "GPU is booting. Warm-up usually takes 3-5 minutes, then retry generation."
+              : status.state === "offline"
+                ? "GPU is offline. Generate Audio will request XTTS startup."
+                : "Generation is available when the GPU is Offline or Ready."}
           </p>
         )}
         <Button
           variant="primary"
           loading={streaming}
-          disabled={!ready || !selectedVoice || !state.text.trim()}
+          disabled={!canStart}
           onClick={start}
         >
           Generate Audio
@@ -166,7 +196,7 @@ export default function GeneratePage() {
             Download Output
           </a>
         ) : (
-          <p className={styles.notice}>Download appears after `complete` or `download_ready` event.</p>
+          <p className={styles.notice}>Download appears after the backend completes generation.</p>
         )}
         <div className={styles.readout}>
           <span>STATE</span>

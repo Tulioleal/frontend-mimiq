@@ -21,6 +21,7 @@ export function createGenerationClient(wsBaseUrl: string, onEvent: (event: Gener
   socket.onerror = () => onEvent({ type: "error", message: "WebSocket stream failed." });
   socket.onclose = () => {
     socket = null;
+    onEvent({ type: "closed" });
   };
 
   return {

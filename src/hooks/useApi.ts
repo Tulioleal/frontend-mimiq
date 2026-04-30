@@ -3,7 +3,31 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api/client";
 import { mapGpuStatus, mapVoice } from "@/lib/api/mappers";
-import type { AudioHealthReport, GpuStatus, Session, Voice } from "@/lib/api/types";
+import type { AudioHealthItem, AudioHealthReport, GpuStatus, Session, Voice } from "@/lib/api/types";
+
+function normalizeHealthItems(value: unknown): AudioHealthItem[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((item) => {
+    if (typeof item === "string") return item;
+    if (!item || typeof item !== "object") return [];
+
+    const record = item as Record<string, unknown>;
+    return {
+      code: typeof record.code === "string" ? record.code : undefined,
+      message: typeof record.message === "string" ? record.message : undefined,
+      severity: typeof record.severity === "string" ? record.severity : undefined
+    };
+  });
+}
+
+function normalizeHealthReport(payload: AudioHealthReport): AudioHealthReport {
+  return {
+    ...payload,
+    issues: normalizeHealthItems(payload.issues),
+    recommendations: normalizeHealthItems(payload.recommendations)
+  };
+}
 
 export function useSession() {
   return useQuery({
@@ -72,7 +96,8 @@ export function useAnalyzeVoice() {
       const formData = new FormData();
       formData.append("name", name);
       formData.append("audio", blob, `${name || "voice-sample"}.webm`);
-      return apiRequest<AudioHealthReport>("/api/voices/analyze", { method: "POST", formData });
+      const report = await apiRequest<AudioHealthReport>("/api/voices/analyze", { method: "POST", formData });
+      return normalizeHealthReport(report);
     },
     onSuccess: (report) => {
       if (report.accepted) queryClient.invalidateQueries({ queryKey: ["voices"] });

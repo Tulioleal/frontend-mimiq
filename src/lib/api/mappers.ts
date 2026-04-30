@@ -21,11 +21,12 @@ export function mapVoice(raw: ApiRecord): Voice {
 
 export function mapGpuStatus(raw: ApiRecord): GpuStatus {
   const allowed: GpuState[] = ["offline", "booting", "ready"];
+  const rawState = raw.status ?? raw.state;
   const state: GpuState =
-    typeof raw.state === "string" && allowed.includes(raw.state as GpuState) ? (raw.state as GpuState) : "error";
+    typeof rawState === "string" && allowed.includes(rawState as GpuState) ? (rawState as GpuState) : "error";
   return {
     state,
-    message: stringValue(raw.message),
+    message: stringValue(raw.detail, stringValue(raw.message)),
     updatedAt: stringValue(raw.updatedAt, stringValue(raw.updated_at))
   };
 }
