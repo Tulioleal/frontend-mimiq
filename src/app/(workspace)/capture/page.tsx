@@ -31,9 +31,11 @@ function getHealthItemKey(section: string, item: AudioHealthItem, index: number)
 export default function CapturePage() {
   const [name, setName] = useState("");
   const [permissionError, setPermissionError] = useState<string>();
+  const [fileError, setFileError] = useState<string>();
   const [recording, setRecording] = useState(false);
   const [level, setLevel] = useState(-60);
   const recorderRef = useRef<MediaRecorder | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const timerRef = useRef<number | undefined>(undefined);
   const chunksRef = useRef<BlobPart[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -50,7 +52,9 @@ export default function CapturePage() {
   async function startRecording() {
     try {
       setPermissionError(undefined);
+      setFileError(undefined);
       reset();
+      if (fileInputRef.current) fileInputRef.current.value = "";
       chunksRef.current = [];
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
@@ -84,6 +88,47 @@ export default function CapturePage() {
     stopTracks();
   }
 
+  function handleReset() {
+    reset();
+    setPermissionError(undefined);
+    setFileError(undefined);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function handleFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    if (recording) {
+      recorderRef.current?.stop();
+      setRecording(false);
+      stopTracks();
+    }
+
+    setPermissionError(undefined);
+    setFileError(undefined);
+    setReport(undefined);
+    setBlob(file);
+
+    const audio = new Audio();
+    const objectUrl = URL.createObjectURL(file);
+
+    audio.preload = "metadata";
+    audio.onloadedmetadata = () => {
+      URL.revokeObjectURL(objectUrl);
+      setElapsed(Number.isFinite(audio.duration) ? Math.floor(audio.duration) : 0);
+    };
+    audio.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      setElapsed(0);
+      setBlob(undefined);
+      setFileError("Unable to read this audio file. Choose a valid audio file and try again.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+    audio.src = objectUrl;
+  }
+
   useEffect(() => () => stopTracks(), []);
 
   const remaining = Math.max(0, MIN_SECONDS - elapsed);
@@ -93,7 +138,7 @@ export default function CapturePage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <p>Capture Wizard</p>
-        <h1>Record a validated voice sample</h1>
+        <h1>Record or upload a validated voice sample</h1>
       </header>
       <section className={styles.grid}>
         <div className={styles.panel}>
@@ -113,11 +158,16 @@ export default function CapturePage() {
                 Stop Recording
               </Button>
             )}
-            <Button variant="ghost" onClick={reset}>
+            <label className={styles.uploadButton}>
+              Upload audio file
+              <input ref={fileInputRef} type="file" accept="audio/*" onChange={handleFileUpload} />
+            </label>
+            <Button variant="ghost" onClick={handleReset}>
               Reset
             </Button>
           </div>
           {permissionError && <p className={styles.error}>{permissionError}</p>}
+          {fileError && <p className={styles.error}>{fileError}</p>}
           <div className={styles.timer}>
             <span>Elapsed</span>
             <strong>
@@ -136,7 +186,7 @@ export default function CapturePage() {
           {previewUrl ? (
             <audio controls src={previewUrl} className={styles.audio} />
           ) : (
-            <p className={styles.muted}>Stop a recording to create a local preview before backend submission.</p>
+            <p className={styles.muted}>Stop a recording or upload an audio file to preview before backend submission.</p>
           )}
           <Button
             variant="primary"
@@ -147,7 +197,7 @@ export default function CapturePage() {
             Submit for Health Report
           </Button>
           {elapsed > 0 && elapsed < MIN_SECONDS && (
-            <p className={styles.error}>Recording too short. Capture at least 60 seconds.</p>
+            <p className={styles.error}>Audio sample too short. Provide at least 60 seconds.</p>
           )}
           {report && (
             <div className={report.accepted ? styles.reportOk : styles.reportBad}>

@@ -94,8 +94,9 @@ export function useAnalyzeVoice() {
   return useMutation({
     mutationFn: async ({ blob, name }: { blob: Blob; name: string }) => {
       const formData = new FormData();
+      const filename = blob instanceof File ? blob.name : `${name || "voice-sample"}.webm`;
       formData.append("name", name);
-      formData.append("audio", blob, `${name || "voice-sample"}.webm`);
+      formData.append("audio", blob, filename);
       const report = await apiRequest<AudioHealthReport>("/api/voices/analyze", { method: "POST", formData });
       return normalizeHealthReport(report);
     },
