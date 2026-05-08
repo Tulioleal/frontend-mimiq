@@ -5,35 +5,18 @@ import { useRouter } from "next/navigation";
 import { DecibelMeter } from "@/components/audio/DecibelMeter";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
-import { useAnalyzeVoice } from "@/hooks/useApi";
-import type { AudioHealthItem } from "@/lib/api/types";
+import { useCloneVoice } from "@/hooks/useApi";
 import { useGenerationStore } from "@/stores/generationStore";
 import { useRecordingStore } from "@/stores/recordingStore";
 import styles from "./page.module.scss";
 
 const MIN_SECONDS = 60;
 
-function getHealthItemText(item: AudioHealthItem) {
-  if (typeof item === "string") return item;
-
-  const message = item.message?.trim();
-  const code = item.code?.trim();
-  const severity = item.severity?.trim();
-  const text = message || code || "Analyzer feedback unavailable";
-
-  return severity ? `${severity}: ${text}` : text;
-}
-
-function getHealthItemKey(section: string, item: AudioHealthItem, index: number) {
-  if (typeof item === "string") return `${section}-${item}-${index}`;
-
-  return `${section}-${item.code ?? item.message ?? "item"}-${index}`;
-}
-
 export default function CapturePage() {
   const [name, setName] = useState("");
   const [permissionError, setPermissionError] = useState<string>();
   const [fileError, setFileError] = useState<string>();
+  const [cloneError, setCloneError] = useState<string>();
   const [recording, setRecording] = useState(false);
   const [level, setLevel] = useState(-60);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -44,19 +27,18 @@ export default function CapturePage() {
   const elapsed = useRecordingStore((state) => state.elapsed);
   const blob = useRecordingStore((state) => state.blob);
   const previewUrl = useRecordingStore((state) => state.previewUrl);
-  const report = useRecordingStore((state) => state.report);
   const setElapsed = useRecordingStore((state) => state.setElapsed);
   const setBlob = useRecordingStore((state) => state.setBlob);
-  const setReport = useRecordingStore((state) => state.setReport);
   const reset = useRecordingStore((state) => state.reset);
   const setSelectedVoice = useGenerationStore((state) => state.setSelectedVoice);
   const router = useRouter();
-  const analyze = useAnalyzeVoice();
+  const clone = useCloneVoice();
 
   async function startRecording() {
     try {
       setPermissionError(undefined);
       setFileError(undefined);
+      setCloneError(undefined);
       reset();
       if (fileInputRef.current) fileInputRef.current.value = "";
       chunksRef.current = [];
@@ -96,6 +78,7 @@ export default function CapturePage() {
     reset();
     setPermissionError(undefined);
     setFileError(undefined);
+    setCloneError(undefined);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -112,7 +95,7 @@ export default function CapturePage() {
 
     setPermissionError(undefined);
     setFileError(undefined);
-    setReport(undefined);
+    setCloneError(undefined);
     setBlob(file);
 
     const audio = new Audio();
@@ -133,11 +116,24 @@ export default function CapturePage() {
     audio.src = objectUrl;
   }
 
-  function useVoiceClone() {
-    if (!report?.voice) return;
+  function handleClone() {
+    if (!blob) return;
 
-    setSelectedVoice(report.voice.id);
-    router.push("/generate");
+    setCloneError(undefined);
+    clone.mutate(
+      { blob, name },
+      {
+        onSuccess: (report) => {
+          if (!report.voice) {
+            setCloneError("The backend completed the request but did not return a voice clone.");
+            return;
+          }
+
+          setSelectedVoice(report.voice.id);
+          router.push("/generate");
+        }
+      }
+    );
   }
 
   useEffect(() => () => stopTracks(), []);
@@ -193,7 +189,7 @@ export default function CapturePage() {
           <DecibelMeter level={level} clipping={level > -4} tooLow={level < -45 && recording} />
         </div>
         <div className={styles.panelWide}>
-          <h2>Preview and analyzer</h2>
+          <h2>Preview and clone</h2>
           {previewUrl ? (
             <audio controls src={previewUrl} className={styles.audio} />
           ) : (
@@ -201,59 +197,19 @@ export default function CapturePage() {
           )}
           <Button
             variant="primary"
-            loading={analyze.isPending}
+            loading={clone.isPending}
             disabled={!canSubmit}
-            onClick={() => blob && analyze.mutate({ blob, name }, { onSuccess: setReport })}
+            onClick={handleClone}
           >
-            Analyze and Clone
+            Clone Voice
           </Button>
           {elapsed > 0 && elapsed < MIN_SECONDS && (
             <p className={styles.error}>Audio sample too short. Provide at least 60 seconds.</p>
           )}
-          {report && (
-            <div className={report.accepted ? styles.reportOk : styles.reportBad}>
-              <strong>{report.accepted ? "Accepted" : "Quality warnings found"}</strong>
-              {report.voice && (
-                <span>
-                  Voice clone created. You can use it, but quality warnings may affect generation output.
-                </span>
-              )}
-              {!report.voice && !report.accepted && (
-                <span>Health checks returned warnings, but no voice clone was returned by the backend.</span>
-              )}
-              <span>Duration: {Math.round(report.duration)}s</span>
-              {report.issues.map((issue, index) => (
-                <span key={getHealthItemKey("issue", issue, index)}>{getHealthItemText(issue)}</span>
-              ))}
-              {report.recommendations.map((item, index) => (
-                <span key={getHealthItemKey("recommendation", item, index)}>{getHealthItemText(item)}</span>
-              ))}
-              <div className={styles.nextActions}>
-                {report.voice ? (
-                  <Button variant="primary" onClick={useVoiceClone}>
-                    Use This Voice
-                  </Button>
-                ) : (
-                  !report.accepted && (
-                    <Button
-                      variant="primary"
-                      loading={analyze.isPending}
-                      disabled={!blob || !name.trim()}
-                      onClick={() => blob && analyze.mutate({ blob, force: true, name }, { onSuccess: setReport })}
-                    >
-                      Clone Anyway
-                    </Button>
-                  )
-                )}
-                <Button variant="secondary" onClick={() => router.push("/dashboard")}>
-                  Go to Dashboard
-                </Button>
-              </div>
-            </div>
-          )}
-          {analyze.isError && (
+          {cloneError && <p className={styles.error}>{cloneError}</p>}
+          {clone.isError && (
             <p className={styles.error}>
-              Analyzer failed. Preserve the recording and retry when the backend is reachable.
+              Clone failed. Preserve the recording and retry when the backend is reachable.
             </p>
           )}
         </div>

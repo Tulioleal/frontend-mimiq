@@ -2,32 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api/client";
-import { mapGpuStatus, mapVoice } from "@/lib/api/mappers";
-import type { AudioHealthItem, AudioHealthReport, GpuStatus, Session, Voice } from "@/lib/api/types";
-
-function normalizeHealthItems(value: unknown): AudioHealthItem[] {
-  if (!Array.isArray(value)) return [];
-
-  return value.flatMap((item) => {
-    if (typeof item === "string") return item;
-    if (!item || typeof item !== "object") return [];
-
-    const record = item as Record<string, unknown>;
-    return {
-      code: typeof record.code === "string" ? record.code : undefined,
-      message: typeof record.message === "string" ? record.message : undefined,
-      severity: typeof record.severity === "string" ? record.severity : undefined
-    };
-  });
-}
-
-function normalizeHealthReport(payload: AudioHealthReport): AudioHealthReport {
-  return {
-    ...payload,
-    issues: normalizeHealthItems(payload.issues),
-    recommendations: normalizeHealthItems(payload.recommendations)
-  };
-}
+import { mapAudioHealthReport, mapGpuStatus, mapVoice } from "@/lib/api/mappers";
+import type { GpuStatus, Session, Voice } from "@/lib/api/types";
 
 export function useSession() {
   return useQuery({
@@ -89,17 +65,16 @@ export function useDeleteVoice() {
   });
 }
 
-export function useAnalyzeVoice() {
+export function useCloneVoice() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ blob, force, name }: { blob: Blob; force?: boolean; name: string }) => {
+    mutationFn: async ({ blob, name }: { blob: Blob; name: string }) => {
       const formData = new FormData();
       const filename = blob instanceof File ? blob.name : `${name || "voice-sample"}.webm`;
       formData.append("name", name);
-      if (force) formData.append("force", "true");
+      formData.append("force", "true");
       formData.append("audio", blob, filename);
-      const report = await apiRequest<AudioHealthReport>("/api/voices/analyze", { method: "POST", formData });
-      return normalizeHealthReport(report);
+      return mapAudioHealthReport(await apiRequest<Record<string, unknown>>("/api/voices/analyze", { method: "POST", formData }));
     },
     onSuccess: (report) => {
       if (report.voice) queryClient.invalidateQueries({ queryKey: ["voices"] });
