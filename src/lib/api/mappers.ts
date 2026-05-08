@@ -53,7 +53,7 @@ export function mapAudioHealthReport(raw: ApiRecord): AudioHealthReport {
 }
 
 export function mapGpuStatus(raw: ApiRecord): GpuStatus {
-  const allowed: GpuState[] = ["offline", "booting", "ready"];
+  const allowed: GpuState[] = ["offline", "booting", "ready", "stale", "error"];
   const rawState = raw.status ?? raw.state;
   const state: GpuState =
     typeof rawState === "string" && allowed.includes(rawState as GpuState) ? (rawState as GpuState) : "error";

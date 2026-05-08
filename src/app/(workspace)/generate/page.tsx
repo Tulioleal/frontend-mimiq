@@ -22,18 +22,20 @@ export default function GeneratePage() {
   const [message, setMessage] = useState("Idle");
   const [wave, setWave] = useState<number[]>([]);
   const clientRef = useRef<GenerationClient | null>(null);
-  const selectedVoice = voices.data?.find((voice) => voice.id === state.selectedVoiceId);
+  const selectedVoiceId = state.selectedVoiceId;
+  const selectedVoice = voices.data?.find((voice) => voice.id === selectedVoiceId);
   const status = gpu.isError
     ? { state: "error" as const, message: "Polling failed" }
     : (gpu.data ?? { state: "stale" as const, message: "Checking GPU" });
   const ready = status.state === "ready";
-  const validDraft = Boolean(selectedVoice && state.text.trim() && state.stylePrompt.trim());
-  const canStart = validDraft && !streaming && (status.state === "offline" || ready);
+  const validDraft = Boolean(selectedVoiceId && state.text.trim() && state.stylePrompt.trim());
+  const canStart = validDraft && !streaming && status.state !== "booting";
+  const generateLabel = ready ? "Generate Audio" : "Start GPU / Generate Audio";
 
   useEffect(() => () => clientRef.current?.cancel(), []);
 
   async function start() {
-    if (!selectedVoice || !canStart) return;
+    if (!selectedVoiceId || !canStart) return;
     setStreaming(true);
     setProgress(0);
     setDownloadUrl(undefined);
@@ -54,7 +56,7 @@ export default function GeneratePage() {
         setMessage("Stream ready");
         client.send({
           type: "start_generation",
-          voice_id: selectedVoice.id,
+          voice_id: selectedVoiceId,
           original_text: state.text,
           style_prompt: state.stylePrompt,
           language: "es",
@@ -136,7 +138,7 @@ export default function GeneratePage() {
         <StatusIndicator state={status.state} message={status.message} />
         <div className={styles.voice}>
           <span>Active voice</span>
-          <strong>{selectedVoice?.name ?? "Select from dashboard"}</strong>
+          <strong>{selectedVoice?.name ?? (selectedVoiceId ? "Selected voice loading" : "Select from dashboard")}</strong>
         </div>
         <Fader
           label="Temperature"
@@ -169,27 +171,11 @@ export default function GeneratePage() {
               ? "GPU is booting. Warm-up usually takes 3-5 minutes, then retry generation."
               : status.state === "offline"
                 ? "GPU is offline. Generate Audio will request XTTS startup."
-                : "Generation is available when the GPU is Offline or Ready."}
+                : "GPU status is uncertain. Generate Audio will try to connect or request XTTS startup."}
           </p>
         )}
-        <Button
-          variant="primary"
-          loading={streaming}
-          disabled={!canStart}
-          onClick={start}
-        >
-          Generate Audio
-        </Button>
-        <Button
-          variant="secondary"
-          disabled={!streaming}
-          onClick={() => {
-            clientRef.current?.cancel();
-            setStreaming(false);
-            setMessage("Cancelled");
-          }}
-        >
-          Cancel Stream
+        <Button variant="primary" loading={streaming} disabled={!canStart} onClick={start}>
+          {generateLabel}
         </Button>
         {downloadUrl ? (
           <a className={styles.download} href={downloadUrl}>
