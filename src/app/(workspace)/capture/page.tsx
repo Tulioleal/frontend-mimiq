@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { DecibelMeter } from "@/components/audio/DecibelMeter";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { useAnalyzeVoice } from "@/hooks/useApi";
 import type { AudioHealthItem } from "@/lib/api/types";
+import { useGenerationStore } from "@/stores/generationStore";
 import { useRecordingStore } from "@/stores/recordingStore";
 import styles from "./page.module.scss";
 
@@ -47,6 +49,8 @@ export default function CapturePage() {
   const setBlob = useRecordingStore((state) => state.setBlob);
   const setReport = useRecordingStore((state) => state.setReport);
   const reset = useRecordingStore((state) => state.reset);
+  const setSelectedVoice = useGenerationStore((state) => state.setSelectedVoice);
+  const router = useRouter();
   const analyze = useAnalyzeVoice();
 
   async function startRecording() {
@@ -129,6 +133,13 @@ export default function CapturePage() {
     audio.src = objectUrl;
   }
 
+  function useVoiceClone() {
+    if (!report?.voice) return;
+
+    setSelectedVoice(report.voice.id);
+    router.push("/generate");
+  }
+
   useEffect(() => () => stopTracks(), []);
 
   const remaining = Math.max(0, MIN_SECONDS - elapsed);
@@ -194,14 +205,22 @@ export default function CapturePage() {
             disabled={!canSubmit}
             onClick={() => blob && analyze.mutate({ blob, name }, { onSuccess: setReport })}
           >
-            Submit for Health Report
+            Analyze and Clone
           </Button>
           {elapsed > 0 && elapsed < MIN_SECONDS && (
             <p className={styles.error}>Audio sample too short. Provide at least 60 seconds.</p>
           )}
           {report && (
             <div className={report.accepted ? styles.reportOk : styles.reportBad}>
-              <strong>{report.accepted ? "Accepted" : "Retry required"}</strong>
+              <strong>{report.accepted ? "Accepted" : "Quality warnings found"}</strong>
+              {report.voice && (
+                <span>
+                  Voice clone created. You can use it, but quality warnings may affect generation output.
+                </span>
+              )}
+              {!report.voice && !report.accepted && (
+                <span>Health checks returned warnings, but no voice clone was returned by the backend.</span>
+              )}
               <span>Duration: {Math.round(report.duration)}s</span>
               {report.issues.map((issue, index) => (
                 <span key={getHealthItemKey("issue", issue, index)}>{getHealthItemText(issue)}</span>
@@ -209,6 +228,27 @@ export default function CapturePage() {
               {report.recommendations.map((item, index) => (
                 <span key={getHealthItemKey("recommendation", item, index)}>{getHealthItemText(item)}</span>
               ))}
+              <div className={styles.nextActions}>
+                {report.voice ? (
+                  <Button variant="primary" onClick={useVoiceClone}>
+                    Use This Voice
+                  </Button>
+                ) : (
+                  !report.accepted && (
+                    <Button
+                      variant="primary"
+                      loading={analyze.isPending}
+                      disabled={!blob || !name.trim()}
+                      onClick={() => blob && analyze.mutate({ blob, force: true, name }, { onSuccess: setReport })}
+                    >
+                      Clone Anyway
+                    </Button>
+                  )
+                )}
+                <Button variant="secondary" onClick={() => router.push("/dashboard")}>
+                  Go to Dashboard
+                </Button>
+              </div>
             </div>
           )}
           {analyze.isError && (

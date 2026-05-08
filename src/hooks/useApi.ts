@@ -92,16 +92,17 @@ export function useDeleteVoice() {
 export function useAnalyzeVoice() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ blob, name }: { blob: Blob; name: string }) => {
+    mutationFn: async ({ blob, force, name }: { blob: Blob; force?: boolean; name: string }) => {
       const formData = new FormData();
       const filename = blob instanceof File ? blob.name : `${name || "voice-sample"}.webm`;
       formData.append("name", name);
+      if (force) formData.append("force", "true");
       formData.append("audio", blob, filename);
       const report = await apiRequest<AudioHealthReport>("/api/voices/analyze", { method: "POST", formData });
       return normalizeHealthReport(report);
     },
     onSuccess: (report) => {
-      if (report.accepted) queryClient.invalidateQueries({ queryKey: ["voices"] });
+      if (report.voice) queryClient.invalidateQueries({ queryKey: ["voices"] });
     }
   });
 }
