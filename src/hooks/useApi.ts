@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api/client";
 import { mapAudioHealthReport, mapGpuStatus, mapVoice } from "@/lib/api/mappers";
-import type { GpuStatus, Session, Voice } from "@/lib/api/types";
+import type { GpuStatus, Session, Voice, WsTicket } from "@/lib/api/types";
 
 export function useSession() {
   return useQuery({
@@ -32,6 +32,10 @@ export function useLogout() {
     mutationFn: () => apiRequest("/api/auth/logout", { method: "POST" }),
     onSettled: () => queryClient.clear()
   });
+}
+
+export function createWsTicket() {
+  return apiRequest<WsTicket>("/api/auth/ws-ticket", { method: "POST" });
 }
 
 export function useGpuStatus() {
@@ -72,9 +76,8 @@ export function useCloneVoice() {
       const formData = new FormData();
       const filename = blob instanceof File ? blob.name : `${name || "voice-sample"}.webm`;
       formData.append("name", name);
-      formData.append("force", "true");
       formData.append("audio", blob, filename);
-      return mapAudioHealthReport(await apiRequest<Record<string, unknown>>("/api/voices/analyze", { method: "POST", formData }));
+      return mapAudioHealthReport(await apiRequest<Record<string, unknown>>("/api/voices", { method: "POST", formData }));
     },
     onSuccess: (report) => {
       if (report.voice) queryClient.invalidateQueries({ queryKey: ["voices"] });

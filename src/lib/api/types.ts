@@ -2,6 +2,8 @@ export type GpuState = "offline" | "booting" | "ready" | "stale" | "error";
 
 export type Session = { authenticated: boolean; user?: string };
 
+export type WsTicket = { ticket: string; expiresInSeconds: number };
+
 export type GpuStatus = { state: GpuState; message?: string; updatedAt?: string };
 
 export type Voice = {
@@ -46,7 +48,7 @@ export type GenerationPayload = {
 
 export type GenerationEvent =
   | { type: "ready" }
-  | { type: "closed" }
+  | { type: "closed"; code?: number; reason?: string }
   | { type: "status"; status: GpuState; detail?: string }
   | { type: "accepted"; generation_id: string; rewritten_text: string }
   | { type: "completed"; generation_id: string; output_gcs_path: string; gpu_time_ms?: number; rtf?: number }

@@ -2,8 +2,14 @@ import type { GenerationEvent, GenerationPayload } from "@/lib/api/types";
 
 export type GenerationClient = { send: (payload: GenerationPayload) => void; cancel: () => void };
 
-export function createGenerationClient(wsBaseUrl: string, onEvent: (event: GenerationEvent) => void): GenerationClient {
-  let socket: WebSocket | null = new WebSocket(`${wsBaseUrl.replace(/\/$/, "")}/ws/generations/stream`);
+export function createGenerationClient(
+  wsBaseUrl: string,
+  ticket: string,
+  onEvent: (event: GenerationEvent) => void
+): GenerationClient {
+  const url = new URL(`${wsBaseUrl.replace(/\/$/, "")}/ws/generations/stream`);
+  url.searchParams.set("ticket", ticket);
+  let socket: WebSocket | null = new WebSocket(url);
 
   socket.binaryType = "blob";
   socket.onopen = () => onEvent({ type: "ready" });
@@ -19,9 +25,9 @@ export function createGenerationClient(wsBaseUrl: string, onEvent: (event: Gener
     }
   };
   socket.onerror = () => onEvent({ type: "error", message: "WebSocket stream failed." });
-  socket.onclose = () => {
+  socket.onclose = (event) => {
     socket = null;
-    onEvent({ type: "closed" });
+    onEvent({ type: "closed", code: event.code, reason: event.reason });
   };
 
   return {

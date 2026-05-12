@@ -36,7 +36,7 @@ function mapHealthItems(value: unknown): AudioHealthItem[] {
 }
 
 export function mapAudioHealthReport(raw: ApiRecord): AudioHealthReport {
-  const rawVoice = raw.voice ?? raw.candidate;
+  const rawVoice = raw.voice ?? (typeof raw.id === "string" ? raw : undefined);
 
   return {
     accepted: Boolean(raw.accepted ?? raw.passed),

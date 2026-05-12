@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Fader } from "@/components/ui/Fader";
 import { TextArea } from "@/components/ui/TextField";
 import { StatusIndicator } from "@/components/ui/StatusIndicator";
-import { useGpuStatus, useVoices } from "@/hooks/useApi";
+import { createWsTicket, useGpuStatus, useVoices } from "@/hooks/useApi";
 import { getRuntimeConfig } from "@/lib/runtimeConfig";
 import { createGenerationClient, type GenerationClient } from "@/lib/websocket/generationClient";
 import { useGenerationStore } from "@/stores/generationStore";
@@ -20,8 +20,10 @@ export default function GeneratePage() {
   const [progress, setProgress] = useState(0);
   const [downloadUrl, setDownloadUrl] = useState<string>();
   const [message, setMessage] = useState("Idle");
+  const [startupRequested, setStartupRequested] = useState(false);
   const [wave, setWave] = useState<number[]>([]);
   const clientRef = useRef<GenerationClient | null>(null);
+  const startupRequestedRef = useRef(false);
   const selectedVoiceId = state.selectedVoiceId;
   const selectedVoice = voices.data?.find((voice) => voice.id === selectedVoiceId);
   const status = gpu.isError
@@ -30,7 +32,7 @@ export default function GeneratePage() {
   const ready = status.state === "ready";
   const validDraft = Boolean(selectedVoiceId && state.text.trim() && state.stylePrompt.trim());
   const canStart = validDraft && !streaming && status.state !== "booting";
-  const generateLabel = ready ? "Generate Audio" : "Start GPU / Generate Audio";
+  const generateLabel = ready ? "Generate Audio" : status.state === "booting" ? "GPU Booting" : "Start GPU";
 
   useEffect(() => () => clientRef.current?.cancel(), []);
 
@@ -40,18 +42,23 @@ export default function GeneratePage() {
     setProgress(0);
     setDownloadUrl(undefined);
     setMessage("Opening stream");
+    setStartupRequested(false);
+    startupRequestedRef.current = false;
     setWave([]);
     let wsBaseUrl: string;
+    let ticket: string;
 
     try {
-      wsBaseUrl = (await getRuntimeConfig()).wsBaseUrl;
+      const [runtimeConfig, wsTicket] = await Promise.all([getRuntimeConfig(), createWsTicket()]);
+      wsBaseUrl = runtimeConfig.wsBaseUrl;
+      ticket = wsTicket.ticket;
     } catch (error) {
       setStreaming(false);
-      setMessage(error instanceof Error ? error.message : "Runtime config unavailable");
+      setMessage(error instanceof Error ? error.message : "WebSocket setup unavailable");
       return;
     }
 
-    const client = createGenerationClient(wsBaseUrl, (event) => {
+    const client = createGenerationClient(wsBaseUrl, ticket, (event) => {
       if (event.type === "ready") {
         setMessage("Stream ready");
         client.send({
@@ -69,10 +76,14 @@ export default function GeneratePage() {
       }
       if (event.type === "status") {
         if (event.status === "booting") {
-          setMessage(event.detail ?? "XTTS startup workflow dispatched. Wait for Ready, then generate again.");
+          setStartupRequested(true);
+          startupRequestedRef.current = true;
+          setMessage(event.detail ?? "GPU startup requested. Wait for Ready, then generate again.");
         } else if (event.status === "offline") {
           setMessage(event.detail ?? "GPU is offline. Startup request was sent.");
         } else if (event.status === "ready") {
+          setStartupRequested(false);
+          startupRequestedRef.current = false;
           setMessage(event.detail ?? "GPU ready. Generation can start.");
         }
       }
@@ -99,10 +110,19 @@ export default function GeneratePage() {
       }
       if (event.type === "gpu_not_ready" || event.type === "error") {
         setStreaming(false);
+        if (startupRequestedRef.current) {
+          setMessage("GPU startup requested. Wait for Ready, then generate again.");
+          void gpu.refetch();
+          return;
+        }
         setMessage(event.message ?? "Stream failed");
       }
       if (event.type === "closed") {
         setStreaming(false);
+        if (startupRequestedRef.current) {
+          setMessage("GPU startup requested. Wait for Ready, then generate again.");
+          void gpu.refetch();
+        }
       }
     });
     clientRef.current = client;
@@ -167,11 +187,13 @@ export default function GeneratePage() {
         />
         {!ready && (
           <p className={styles.notice}>
-            {status.state === "booting"
-              ? "GPU is booting. Warm-up usually takes 3-5 minutes, then retry generation."
-              : status.state === "offline"
-                ? "GPU is offline. Generate Audio will request XTTS startup."
-                : "GPU status is uncertain. Generate Audio will try to connect or request XTTS startup."}
+            {startupRequested
+              ? "GPU startup requested. Waiting for Ready..."
+              : status.state === "booting"
+                ? "GPU is booting. Warm-up usually takes 3-5 minutes."
+                : status.state === "offline"
+                  ? "GPU is offline. Start GPU will dispatch XTTS startup. Generate again when Ready."
+                  : "GPU status is uncertain. Start GPU will try to dispatch startup."}
           </p>
         )}
         <Button variant="primary" loading={streaming} disabled={!canStart} onClick={start}>
