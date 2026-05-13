@@ -2,6 +2,7 @@
   "name": "pvc-frontend",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.25.0",
   "scripts": {
     "dev": "next dev",
     "lint": "eslint .",
@@ -10,7 +11,7 @@
     "validate:public-env": "node scripts/validate-public-env.mjs",
     "typecheck": "tsc --noEmit",
     "build": "next build",
-    "build:container": "npm run validate:public-env && npm run build",
+    "build:container": "pnpm run validate:public-env && pnpm run build",
     "start": "HOSTNAME=0.0.0.0 node .next/standalone/server.js",
     "test": "vitest run"
   },

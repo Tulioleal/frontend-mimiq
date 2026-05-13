@@ -53,7 +53,9 @@ export default function DashboardPage() {
         {voices.isLoading && <p className={styles.empty}>Loading voice metadata from the backend.</p>}
         {voices.isError && <p className={styles.empty}>Voice Vault unavailable. Check backend connectivity.</p>}
         {voices.data?.length === 0 && (
-          <p className={styles.empty}>No cloned voices yet. Record or upload at least 60 seconds to unlock generation.</p>
+          <p className={styles.empty}>
+            No cloned voices yet. Record or upload at least 60 seconds to unlock generation.
+          </p>
         )}
         <div className={styles.grid}>
           {voices.data?.map((voice) => (

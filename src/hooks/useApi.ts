@@ -77,7 +77,9 @@ export function useCloneVoice() {
       const filename = blob instanceof File ? blob.name : `${name || "voice-sample"}.webm`;
       formData.append("name", name);
       formData.append("audio", blob, filename);
-      return mapAudioHealthReport(await apiRequest<Record<string, unknown>>("/api/voices", { method: "POST", formData }));
+      return mapAudioHealthReport(
+        await apiRequest<Record<string, unknown>>("/api/voices", { method: "POST", formData })
+      );
     },
     onSuccess: (report) => {
       if (report.voice) queryClient.invalidateQueries({ queryKey: ["voices"] });

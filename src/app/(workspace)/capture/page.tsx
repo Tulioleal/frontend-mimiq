@@ -193,14 +193,11 @@ export default function CapturePage() {
           {previewUrl ? (
             <audio controls src={previewUrl} className={styles.audio} />
           ) : (
-            <p className={styles.muted}>Stop a recording or upload an audio file to preview before backend submission.</p>
+            <p className={styles.muted}>
+              Stop a recording or upload an audio file to preview before backend submission.
+            </p>
           )}
-          <Button
-            variant="primary"
-            loading={clone.isPending}
-            disabled={!canSubmit}
-            onClick={handleClone}
-          >
+          <Button variant="primary" loading={clone.isPending} disabled={!canSubmit} onClick={handleClone}>
             Clone Voice
           </Button>
           {elapsed > 0 && elapsed < MIN_SECONDS && (

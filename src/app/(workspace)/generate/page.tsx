@@ -158,7 +158,9 @@ export default function GeneratePage() {
         <StatusIndicator state={status.state} message={status.message} />
         <div className={styles.voice}>
           <span>Active voice</span>
-          <strong>{selectedVoice?.name ?? (selectedVoiceId ? "Selected voice loading" : "Select from dashboard")}</strong>
+          <strong>
+            {selectedVoice?.name ?? (selectedVoiceId ? "Selected voice loading" : "Select from dashboard")}
+          </strong>
         </div>
         <Fader
           label="Temperature"
